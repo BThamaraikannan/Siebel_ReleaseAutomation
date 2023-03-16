@@ -1,0 +1,42 @@
+pipeline {
+    agent any
+    stages {
+        stage ('clean workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage ('checkout the repo') {
+            steps {
+                checkout([$class: 'GitSCM', 
+                branches: [[name: '*/uat_br']], 
+                extensions: [], 
+                userRemoteConfigs: [[credentialsId: 'OraHub_epact', 
+                url: 'https://orahub.oci.oraclecorp.com/epact/epact-releaseautomation.git']]])
+            }
+        }
+
+        stage ('creation of package Export phase') {
+            steps {
+                sh 'python Export/export.py' 
+                }
+        }
+
+        stage ('e-mail notification') {
+            steps {
+                notifyResult()
+            }
+        }
+    }
+}
+
+def notifyResult() {
+    emailext (
+        subject: "SUCCESSFUL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+        body: """<p>SUCCESSFUL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
+        <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>""",
+        recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+    )
+}
+

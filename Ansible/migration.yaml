@@ -1,0 +1,40 @@
+- hosts: 100.100.181.24
+  become: true
+  gather_facts: no
+  vars:
+    exist_path: "/u02/filesystem/migration/"
+  tasks:
+    - name: get the watermark directory
+      set_fact:
+        exist_path: "{{ exist_path + watermark_file }}"
+
+    - name: print the value
+      debug:
+        var: exist_path
+
+    - name: fetch watermark file from uat to ansible
+      fetch: src={{ exist_path }} dest=/scratch/jenkins_home
+
+- hosts: 100.100.176.126
+  become: true
+  vars:
+    exist_path: "/u02/filesystem/migration/"
+    dest_path: "/u02/filesystem/migration/"
+  tasks:
+    - name: get the watermark directory
+      set_fact:
+        exist_path: "{{ exist_path + watermark_file }}"
+
+    - name: Migrate watermark file from ansible to dev
+      copy: src=/scratch/jenkins_home/100.100.181.24/{{ exist_path }} dest={{ dest_path}}
+    
+    - name: file permission change
+      shell: |
+        chown oracle:oinstall {{ exist_path }}
+        chmod 775 {{ exist_path }}
+
+- hosts: localhost
+  #become: true
+  tasks:
+    - name: delete the temp dir/file
+      command: rm -rf 100.100.181.24 chdir=/scratch/jenkins_home

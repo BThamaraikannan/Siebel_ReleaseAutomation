@@ -1,0 +1,24 @@
+- hosts: all
+  become: true
+  vars:
+   contents: "{{ lookup('file','../Scripts/test_api.py') }}"
+   script_path: /scratch/jenkins_home/workspace/ePACT_WaterMark_Phase/Scripts/test_api.py
+  tasks:
+   - name: print file
+     ansible.builtin.debug:
+      msg: "the script for watermark creation:  {{ contents }}"
+
+   - name: Copy the watermark script to Remote nodes
+     copy:
+       src: "{{script_path}}"
+       dest: /home/opc
+
+   - name: run the watermark script
+     script: /scratch/jenkins_home/workspace/ePACT_WaterMark_Phase/Scripts/test_api.py
+     register: output
+
+   - debug: msg="{{ output.stdout }}"
+  
+   - debug: msg="{{ output.stderr }}"
+
+   - debug: var=output.stdout_lines

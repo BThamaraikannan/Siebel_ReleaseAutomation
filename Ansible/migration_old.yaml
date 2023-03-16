@@ -1,0 +1,36 @@
+- hosts: 100.100.181.24
+  become: true
+  gather_facts: no
+  tasks:
+#   - name: Migrate from UAT to DEV
+#     synchronize:
+#       src: /home/opc/test.txt
+#       dest: /home/opc
+#       rsync_opts:
+#         - "-e ssh -i /home/opc/.ssh/epact_keys"
+#     delegate_to: 100.100.181.24
+    
+    - name: fetch watermark file from uat to ansible
+      fetch: src=/home/opc/test.txt dest=/home/btkannan
+
+- hosts: 100.100.176.126
+  become: true
+  tasks:
+    - name: Migrate watermark file from ansible to dev
+      copy: src=/home/btkannan/100.100.181.24/home/opc/test.txt dest=/home/opc
+
+- hosts: localhost
+  become: true
+  tasks:
+    - name: delete the temp dir/file
+      command: rm -rf 100.100.181.24 chdir=/home/btkannan
+
+#   - name: Migrate the watermark from UAT to DEV
+#     shell: scp -i /home/opc/.ssh/epact_keys /home/opc/test.txt opc@100.100.176.126:/home/opc
+#     register: output
+
+#   - debug: msg="{{ output.stdout }}"
+  
+#  # - debug: msg="{{ output.stderr }}"
+
+#  # - debug: var=output.stdout_lines

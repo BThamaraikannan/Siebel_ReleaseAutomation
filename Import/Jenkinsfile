@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+    parameters {
+        string(defaultValue: 'package file name', 
+            description: 'Please enter the Package file name for import', 
+            name: 'PackageFile', 
+            trim: false)
+    }
+    stages {
+        stage ('clean workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage ('checkout the repo') {
+            steps {
+                checkout([$class: 'GitSCM', 
+                branches: [[name: '*/uat_br']], 
+                extensions: [], 
+                userRemoteConfigs: [[credentialsId: 'OraHub_epact', 
+                url: 'https://orahub.oci.oraclecorp.com/epact/epact-releaseautomation.git']]])
+            }
+        }
+
+        /*stage ('Water mark Generation') {
+            steps {
+                sh 'ansible-playbook -i "${WORKSPACE}"/Ansible/inventory "${WORKSPACE}"/Ansible/watermark_creation.yaml'
+            }
+        }*/
+
+        stage ('Migration of Package to UAT Environement') {
+            steps {
+                sh 'ansible-playbook "${WORKSPACE}"/Import/import_migration.yaml --extra-vars "Package_file="${PackageFile}"" -i "${WORKSPACE}"/Ansible/inventory'
+            }
+        }
+
+        stage ('Package Import phase') {
+            steps {
+                sh 'python Import/import.py' 
+                }
+        }
+
+        stage ('e-mail notification') {
+            steps {
+                notifyResult()
+            }
+        }
+    }
+}
+
+def notifyResult() {
+    emailext (
+        subject: "SUCCESSFUL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
+        body: """<p>SUCCESSFUL: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
+        <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>""",
+        recipientProviders: [[$class: 'DevelopersRecipientProvider']]
+    )
+}
+
